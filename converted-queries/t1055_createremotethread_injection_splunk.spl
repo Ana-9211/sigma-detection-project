@@ -1,0 +1,2 @@
+EventID=8 EventID=8 NOT (SourceImage IN ("*\\svchost.exe", "*\\services.exe", "*\\wininit.exe", "*\\MsMpEng.exe"))
+| where NOT 'SourceImage'='TargetImage'

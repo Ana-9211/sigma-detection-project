@@ -1,0 +1,39 @@
+name: lint_python
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint_python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: pdm-project/setup-pdm@v4
+        with:
+          python-version: "3.13"
+      - run: pdm install --dev
+
+      # Both are clean, so both block. The rule set and its exemptions live in
+      # pyproject.toml; without them ruff lints against whatever its current
+      # default happens to be and the result changes with the installed version.
+      - name: Lint
+        run: pdm run ruff check .
+      # This covers the CLI too: zircolite.py is a shim over zircolite/cli.py.
+      # Naming zircolite.py here as well would not add the shim, it would abort
+      # the whole run -- the script shares its name with the package, and mypy
+      # answers "Duplicate module named zircolite" without checking anything.
+      # tests/test_entry_point.py is what guarantees the shim has nothing in it
+      # to check.
+      - name: Types
+        run: pdm run python -m mypy zircolite
+
+      # Formatting is not enforced: running `ruff format` over this codebase
+      # would rewrite most of it and bury every behavioural diff.
+      - name: Format (advisory)
+        run: pdm run ruff format --check zircolite/ zircolite.py || true

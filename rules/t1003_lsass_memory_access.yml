@@ -1,0 +1,33 @@
+title: Suspicious Process Access to LSASS Memory
+id: 8a1c2f3e-4b5d-4e6f-9a0b-1c2d3e4f5a6b
+status: experimental
+description: Detects processes requesting high-privilege memory access to lsass.exe, consistent with credential dumping (e.g. Mimikatz, ProcDump abuse)
+references:
+    - https://attack.mitre.org/techniques/T1003/001/
+author: Ysa
+date: 2026-08-24
+tags:
+    - attack.credential-access
+    - attack.t1003.001
+logsource:
+    category: process_access
+    product: windows
+detection:
+    selection:
+        TargetImage|endswith: '\lsass.exe'
+        GrantedAccess:
+            - '0x1010'
+            - '0x1410'
+            - '0x1438'
+            - '0x143a'
+            - '0x1fffff'
+    filter_legit:
+        SourceImage|endswith:
+            - '\svchost.exe'
+            - '\wininit.exe'
+            - '\services.exe'
+            - '\lsass.exe'
+    condition: selection and not filter_legit
+falsepositives:
+    - Legitimate security/monitoring tools that inspect lsass (EDR agents) — tune filter_legit for your environment
+level: high

@@ -1,0 +1,26 @@
+﻿title: Local or Domain Group Membership Enumeration via Windows Security Auditing
+id: 5e6f7a8b-9c0d-4e1f-2a3b-4c5d6e7f8a9b
+status: experimental
+description: Detects local or security-enabled group membership enumeration captured via Windows Security auditing (Events 4798/4799), covering discovery activity invisible to Sysmon process-creation logging
+references:
+    - https://attack.mitre.org/techniques/T1087/001/
+    - https://attack.mitre.org/techniques/T1069/001/
+author: Ysa
+date: 2026-08-24
+tags:
+    - attack.discovery
+    - attack.t1087.001
+    - attack.t1069.001
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID:
+            - 4798
+            - 4799
+    condition: selection
+falsepositives:
+    - Extremely common in normal operation - any application or admin action checking group membership triggers this
+    - Should be correlated with the requesting account and process for context, not treated as inherently suspicious
+level: low

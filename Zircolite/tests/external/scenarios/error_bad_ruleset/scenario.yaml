@@ -1,0 +1,14 @@
+# A broken ruleset file is reported, not crashed on -- and the run fails.
+# It used to exit 0 after loading 0 rules, which left an empty result file
+# indistinguishable from a clean run that genuinely found nothing.
+tags: [error]
+command:
+  - "-e"
+  - "/data/input/events.jsonl"
+  - "-r"
+  - "/data/input/broken.json"
+  - "-j"
+expected_exit_code: 1
+allow_stderr_errors: true
+stdout_contains:
+  - "No rules to execute"

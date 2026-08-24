@@ -1,0 +1,1 @@
+EventID=1 Image IN ("*\\powershell.exe", "*\\pwsh.exe") CommandLine IN ("*-enc*", "*-EncodedCommand*", "*-w hidden*", "*-windowstyle hidden*", "*IEX*", "*DownloadString*", "*Invoke-Expression*", "*Net.WebClient*")

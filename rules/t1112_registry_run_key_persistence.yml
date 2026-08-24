@@ -1,0 +1,29 @@
+﻿title: Suspicious Registry Modification for Run Key Persistence
+id: 2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e
+status: experimental
+description: Detects registry value writes to Run/RunOnce keys commonly used for persistence
+references:
+    - https://attack.mitre.org/techniques/T1112/
+    - https://attack.mitre.org/techniques/T1547/001/
+author: Ysa
+date: 2026-08-24
+tags:
+    - attack.persistence
+    - attack.defense-evasion
+    - attack.t1112
+    - attack.t1547.001
+logsource:
+    category: registry_set
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\CurrentVersion\Run\'
+            - '\CurrentVersion\RunOnce\'
+    filter_common:
+        Image|endswith:
+            - '\msiexec.exe'
+    condition: selection and not filter_common
+falsepositives:
+    - Many legitimate installers write to Run keys for auto-start functionality
+level: medium

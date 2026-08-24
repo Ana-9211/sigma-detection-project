@@ -1,0 +1,1 @@
+EventID=1 Image IN ("*\\net.exe", "*\\net1.exe", "*\\nltest.exe", "*\\whoami.exe") CommandLine IN ("*net group*", "*net localgroup*", "*net user*", "*nltest /domain_trusts*", "*nltest /dclist*", "*whoami /priv*", "*whoami /groups*")

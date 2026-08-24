@@ -1,0 +1,1 @@
+EventID=1 Image="*\\attrib.exe" CommandLine IN ("*+h*", "*+s +h*")

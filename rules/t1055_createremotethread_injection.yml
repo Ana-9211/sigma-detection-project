@@ -1,0 +1,31 @@
+title: Suspicious CreateRemoteThread Cross-Process Activity
+id: 3f7e9c1a-2b8d-4a5c-9e1f-6d2a8b4c7e93
+status: experimental
+description: Detects a process creating a remote thread in another process, consistent with classic process injection techniques
+references:
+    - https://attack.mitre.org/techniques/T1055/
+author: Ysa
+date: 2026-08-24
+tags:
+    - attack.defense-evasion
+    - attack.privilege-escalation
+    - attack.t1055
+logsource:
+    category: create_remote_thread
+    product: windows
+detection:
+    selection:
+        EventID: 8
+    filter_knownsource:
+        SourceImage|endswith:
+            - '\svchost.exe'
+            - '\services.exe'
+            - '\wininit.exe'
+            - '\MsMpEng.exe'
+    filter_self:
+        SourceImage|fieldref: TargetImage
+    condition: selection and not filter_knownsource and not filter_self
+falsepositives:
+    - Some legitimate software (debuggers, monitoring tools, certain installers) use CreateRemoteThread for non-malicious purposes
+    - EDR/AV agents may inject into processes for instrumentation — tune filter_legit per environment
+level: medium
