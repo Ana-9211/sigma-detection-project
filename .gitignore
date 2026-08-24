@@ -1,0 +1,7 @@
+﻿# Local/generated outputs
+*.log
+*.json
+
+# Large third-party or external data sources kept out of the repo
+Zircolite/
+test-logs/
