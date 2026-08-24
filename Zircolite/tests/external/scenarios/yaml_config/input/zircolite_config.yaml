@@ -1,6 +1,0 @@
-input:
-  path: /data/input/events.jsonl
-  format: json
-
-output:
-  file: /data/output/detected_events.json
