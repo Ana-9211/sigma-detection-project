@@ -4,7 +4,7 @@ status: experimental
 description: Detects processes requesting high-privilege memory access to lsass.exe, consistent with credential dumping (e.g. Mimikatz, ProcDump abuse)
 references:
     - https://attack.mitre.org/techniques/T1003/001/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.credential-access

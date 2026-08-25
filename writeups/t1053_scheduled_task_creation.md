@@ -1,23 +1,27 @@
-# T1053.005 — Scheduled Tasks
+# T1053.005 — Scheduled Task Creation
 
-This was one of the easier ones to understand once I saw the actual process execution. Scheduled tasks are a standard Windows feature, but attackers abuse them for persistence and delayed execution. The rule is basically about catching the creation of the task itself, not just the payload that eventually runs.
+This one was pretty easy to understand once I looked at the actual execution flow. Scheduled tasks are a normal Windows feature, but attackers abuse them for persistence and delayed execution. The rule is about catching the creation of the task itself, not just the payload that eventually runs later.
 
-## What I was looking for
+## Technique
 
-The rule focuses on the task creation utility and the command-line behavior around it. The idea is to catch the moment when a system is being configured to run something automatically in the future.
+Scheduled tasks are a classic persistence mechanism. An attacker can configure a task to run at a specific time or trigger, which lets them execute code without needing to keep the process running continuously.
 
-I was not trying to detect every scheduled task on the host. That would be useless. I was trying to catch the patterns that look like persistence or execution staging rather than normal admin maintenance.
+## Detection Logic
+
+The rule focuses on the Windows task-creation utility and the command-line arguments used to create or schedule the task. The point is to catch the moment someone configures the system to execute something automatically.
+
+I was not trying to flag every scheduled task on a system, because that would be a terrible signal. I was trying to isolate the creation pattern that looks like malicious persistence or task-based execution.
 
 ## Validation
 
-The detection matched what I expected in the dataset. It gave me a clean signal that scheduled-task creation was happening in the attack samples, which makes sense because scheduled tasks are such a common persistence mechanism.
+The rule matched the expected scheduled-task activity in the sample set. That made sense because scheduled tasks are such a common persistence method in attack scenarios. The detections were not random; they were aligned with the planned execution chain.
 
-The important thing I learned with this one is that not all scheduled tasks are malicious, but the creation pattern is still a useful signal when paired with the command line and the executable being launched.
+One thing I learned here is that a task creation event is not automatically malicious. It becomes suspicious when the command line, target executable, and execution context match attacker behavior.
 
-## False positives
+## False Positive Considerations
 
-The main false positive risk is system maintenance, patching, and enterprise automation. A lot of legitimate software creates scheduled tasks. So this rule is best used with context rather than as a stand-alone alert.
+This rule definitely has some normal admin noise. Patch management, software updates, and enterprise automation tools all create scheduled tasks. So I would not treat a match as proof of compromise on its own. I would want the surrounding context.
 
-## Overall impression
+## Portability
 
-This was a solid rule because it matched a clear attacker behavior and was easy to reason about. It also reinforced the idea that many Windows persistence techniques are not mysterious. They are just regular admin features being abused.
+The rule converted to Splunk without much trouble, and it kept the same logic. It was one of the more straightforward rules in the project, but it still reinforced an important lesson: persistence is often just a legit Windows feature being abused in a very normal-looking way.

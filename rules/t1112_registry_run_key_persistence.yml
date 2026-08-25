@@ -5,7 +5,7 @@ description: Detects registry value writes to Run/RunOnce keys commonly used for
 references:
     - https://attack.mitre.org/techniques/T1112/
     - https://attack.mitre.org/techniques/T1547/001/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.persistence

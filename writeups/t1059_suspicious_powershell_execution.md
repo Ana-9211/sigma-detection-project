@@ -1,35 +1,27 @@
-# T1059.001 — Suspicious PowerShell
+# T1059.001 — Suspicious PowerShell Execution
 
-This one was a good example of why detection engineering is not just writing a list of keywords. I started with a bunch of obvious PowerShell flags, and then I found out one of them was messing up the whole rule.
+This one was a good example of why detection engineering is not just “write a list of common attacker strings and hope for the best.” I started with a bunch of obvious PowerShell flags and then found out one of them was actually making the rule worse.
 
-## What I originally thought
+## Technique
 
-I wanted to catch suspicious PowerShell execution patterns like encoded commands, hidden windows, download strings, and IEX. That is a common attacker behavior and it is easy to understand.
+This covers PowerShell-based execution that is often used for obfuscation, encoded commands, remote content, or script execution. Attackers like PowerShell because it is built into Windows and usually has enough access to do a lot of malicious work without dropping a totally obvious binary.
 
-The first version included a bunch of indicators, including -nop. That looked harmless at first because -nop is a real PowerShell flag, but it turned out to be a bad choice because it is also a substring inside -NoProfile.
+## Detection Logic
 
-## The bug that showed up later
+The rule looks for suspicious execution patterns like encoded commands, hidden execution flags, download-related command strings, and IEX usage. I was trying to catch the normal indicators that show up in malicious scripts.
 
-This was a really useful bug to catch. The rule matched a bunch of benign PowerShell commands because -nop appeared inside a longer argument, -NoProfile. That meant the rule was matching strings that were not actually the suspicious flag I wanted.
+The bug was that I had included a `-nop` check. At first it looked harmless because `-nop` is a real PowerShell switch, but it is also a substring inside `-NoProfile`. That meant the rule could match the wrong command lines and create noise. It was not a syntax error, just a logic issue caused by loose substring matching.
 
-It was not a Sigma syntax problem. It was a logic problem caused by using a broad string match on a short substring. The lesson here is that command-line detection is full of tiny traps like this.
-
-## What I changed
-
-I removed the -nop indicator and kept the rule focused on the more clearly malicious patterns. The final version still catches encoded commands, hidden execution, download strings, and IEX patterns, but it is much less likely to flag normal PowerShell behavior.
-
-This was one of the moments where I realized that an alert is only useful if it catches what you want and not a bunch of harmless script noise.
+I removed that part and narrowed the detection back down to the clearer malicious patterns. That ended up making the rule more reliable.
 
 ## Validation
 
-When I reran it, the rule still matched the suspicious samples I expected, but the false positive count dropped. It matched the suspicious PowerShell execution patterns in the dataset without the noisy benign cases.
+After the fix, the rule still matched the suspicious files I expected, but the false positives dropped. The dataset included a real testing script that was intentionally mimicking attacker behavior in a safe environment. That was a good reminder that “looks malicious” does not always mean “is malicious.” The pattern can still be benign by intent, even if the command line is suspicious enough to trigger the rule.
 
-One sample was especially interesting because it was a testing script designed to mimic attacker behavior in a safe environment. That showed me a subtle point: a command line can look malicious and still not be malicious by intent. The rule itself was doing what it was supposed to do, but context still matters.
+## False Positive Considerations
 
-## False positives
-
-This is a classic example of a rule that needs context. PowerShell is used all the time by admins, deployment tools, and software automation. If I saw a hit, I would want to check who spawned it, where the parent process came from, and whether the command line was part of a legitimate admin workflow or a suspicious payload.
+PowerShell is everywhere in enterprise environments. Admins, software deployment tools, maintenance scripts, and internal tooling all use it. So a hit is not enough on its own. I would check the process tree, who launched it, what the parent process was, and whether the command line fit a legitimate workflow or a suspicious payload.
 
 ## Portability
 
-I converted it to Splunk as well. The logic transferred fine, and the bigger takeaway was the same as before: string matching is powerful, but it needs to be careful and specific.
+I converted it to Splunk as well. The logic translated fine, but the real lesson was more important than the conversion: command-line detection is easy to overfit if the indicators are too broad or too clever.

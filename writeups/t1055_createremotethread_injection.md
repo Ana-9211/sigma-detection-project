@@ -1,33 +1,33 @@
 # T1055 — CreateRemoteThread Injection
 
-This one was one of the more interesting rules because it taught me that rule logic can look correct and still break in a subtle way. I thought I had the filters right, but there was a bug in how I compared the source and target fields.
+This one was one of the more interesting rules because it showed me that a rule can look correct and still be wrong in a subtle way. I thought I had the filters sorted, but then I caught a bug in how the source and target fields were compared.
 
-## What I was trying to detect
+## Technique
 
-CreateRemoteThread injection is when one process creates a thread inside another process. That is a classic way to run code under someone else's memory space, which is exactly the kind of thing malware does to hide or blend in.
+CreateRemoteThread injection means one process creates a thread inside another process. That is a pretty classic way to run code in someone else's memory space, which is exactly what attackers do when they are trying to hide or make their code blend in.
 
-I was looking at Sysmon Event ID 8, which records this kind of remote thread creation. The suspicious part is not just that a thread was created. It is that a process like PowerShell or some other tool created a thread inside a normal user process such as notepad.
+I was watching Sysmon Event ID 8 for that pattern. The suspicious part is not just that a thread was created, but that something like PowerShell created a thread inside a user process like notepad.
 
-## The filter issue I had to fix
+## Detection Logic
 
-I had two filters in the rule. One excluded known legit source processes like svchost, services, wininit, and MsMpEng. The other tried to exclude self-process events by comparing SourceImage to TargetImage.
+The rule looks at Event ID 8 and then checks the source and target process relationship. I had two filter blocks. One excluded known system processes like svchost, services, wininit, and MsMpEng. The other was meant to exclude self-spawns by comparing SourceImage and TargetImage.
 
-The problem was that I initially used a literal comparison instead of a field-to-field comparison. That meant the rule did not actually compare the two fields properly. It just checked whether the string looked similar instead of whether the values were equal.
+The problem was that the original comparison was not actually comparing the two fields properly. It was using a literal comparison instead of field-to-field comparison, which meant the logic did not behave the way I thought it did. That is exactly the kind of bug that slips through if you only trust the Sigma validation output and do not inspect the raw event fields.
 
-The fix was to use the fieldref approach so that Sigma compares SourceImage and TargetImage correctly. This is the kind of mistake that would be easy to miss if I had only looked at the green validation output and not the actual raw event values.
+I fixed it by using the proper fieldref logic so Sigma compares SourceImage to TargetImage correctly. This was one of those moments where the validation pass told me nothing useful until I looked deeper at the data.
 
 ## Validation
 
-I tested the rule against the Meterpreter reflective PE injection sample and it matched 9 events. The source was PowerShell and the target was notepad. That is the kind of process relationship that stands out.
+I tested the rule against the Meterpreter reflective PE injection sample and it matched 9 events. The source was PowerShell and the target was notepad. That is a strong signal because notepad has no real reason to be receiving threads from PowerShell.
 
-The most important thing was the fact that all 9 events shared the same source and target process IDs. They were part of one injection sequence, not 9 separate random events. That made the pattern much more believable.
+The important thing was that all 9 events shared the same source and target process GUIDs. They were part of one continuous injection chain, not nine unrelated events. That made the detection feel much more real and much less like random noise.
 
-## False positives
+## False Positive Considerations
 
-This one definitely has a false positive risk. Debuggers, EDR, and some admin tools can create remote threads for legitimate reasons. That is why I excluded a few known system processes and why the rule should still be used with context.
+This one definitely has a false positive risk. Debuggers, EDR tooling, and some legitimate admin applications can create remote threads too. That is why the exclusion list matters and why I would still want to check the context before calling it malicious.
 
-The thing I learned here is that the rule is not trying to say a remote thread always means malware. It is trying to flag a suspicious relationship that deserves investigation.
+The rule is not saying every remote thread is malicious. It is saying a cross-process thread creation relationship that matches the suspicious pattern deserves investigation.
 
 ## Portability
 
-I converted the rule to Splunk as well. The logic still held up in the converted form, which was useful, but the bigger lesson was the field comparison bug. That was the kind of mistake that would not have been caught by just trusting the output.
+I converted the rule to Splunk as well. The converted query kept the same logic, but the bigger lesson was the field comparison bug. That was the kind of mistake that would not have been caught unless I actually looked at the event structure and reasoned about what the rule was doing.

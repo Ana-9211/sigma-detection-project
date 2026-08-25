@@ -1,23 +1,27 @@
-# T1070.001 — Event Log Clearing
+# T1070.001 — Clear Windows Event Logs
 
-This one is pretty straightforward in concept but kind of tricky in interpretation. The attacker clears security logs to remove evidence. That is a classic anti-forensics move, so this rule is meant to catch the event where the Windows Security log itself was cleared.
+This is one of those detections that is conceptually really simple but still easy to misread. The idea is that an attacker clears the Windows Security log to remove evidence of what they did. That is anti-forensics, plain and simple.
 
-## What I was looking for
+## Technique
 
-The rule is based on Windows Security Event ID 1102. That is the event that records the Security log being cleared. It is not a Sysmon event. It belongs to the Windows audit pipeline, which is exactly the thing I had to remember when I was testing it.
+Clear Windows Event Logs is a classic way to destroy forensic trail. If somebody wipes the Security log, they are trying to hide logon activity, process execution, persistence, or anything else that would otherwise be visible to analysts.
 
-This is a good example of why I stopped assuming every detection should use Sysmon. Sometimes the evidence is in the security log, not in process creation telemetry.
+## Detection Logic
+
+The rule is built around Windows Security Event ID 1102, which is generated when the Security log is cleared. This belongs to the Windows audit pipeline rather than Sysmon, which was a useful thing to remember while I was validating it.
+
+This is one of the clearest examples in the project of a rule where the actual telemetry source matters more than the detector logic itself. If I had used the wrong pipeline, I would have been chasing the wrong type of event.
 
 ## Validation
 
-It matched 24 hits in the attack sample set. That number looked high at first, but the dataset is a collection of attack scenarios and repeated test-environment log resets can easily inflate the count. So I did not treat every hit as a separate malicious action. I treated it as a valid signal that Event ID 1102 appeared in the dataset.
+I tested it against the full EVTX attack sample set and got 24 hits. At first that looked like a lot, but the dataset is a collection of repeated attack scenarios and lab resets, so I did not assume each hit was an independent malicious cleanup. The important point was that the event was present and the rule caught it correctly.
 
-That was an important mindset change for me. A high hit count is not automatically meaningful until you think about the dataset context.
+That was a useful lesson in not overinterpreting high numbers without dataset context. A lot of detections in these sample corpora are not one-to-one with real-world incidents.
 
-## False positives
+## False Positive Considerations
 
-This can happen during legitimate admin maintenance, log rotation, troubleshooting, or lab resets. So I would not call it a malicious alert by itself. In production, I would correlate it with the account that cleared the log, the host, the time window, and the surrounding events.
+Administrators can legitimately clear or rotate logs during maintenance or troubleshooting. So I would not call this a malicious alert by itself. In a real environment, I would correlate it with who cleared the log, what host it was on, whether the action was expected, and what else happened around the same time.
 
 ## Portability
 
-The rule converted into Splunk using the Windows audit pipeline. It was one of the clearer examples of a detection that depends on the correct telemetry layer rather than on the rule expression alone.
+I converted it into Splunk using the Windows audit pipeline. It stayed clean and easy to understand, and it reinforced the same point as a few earlier detections: you have to pick the right telemetry source before the rule can be meaningful.

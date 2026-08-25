@@ -4,7 +4,7 @@ status: experimental
 description: Detects rundll32.exe invoked with command-line patterns associated with known living-off-the-land abuse (zipfldr, shdocvw, advpack, comsvcs minidump, etc.)
 references:
     - https://attack.mitre.org/techniques/T1218/011/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.defense-evasion

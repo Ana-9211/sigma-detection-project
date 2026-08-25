@@ -1,33 +1,31 @@
 # T1087 and T1069 — Account and Group Discovery
 
-This was one of the best examples of a rule failing for the right reason. I first wrote the Sysmon version because it seemed obvious: if an attacker is enumerating accounts and groups, they will probably run net.exe, whoami.exe, or similar commands.
+This one was one of the best examples of a rule failing for the right reason. I first wrote the Sysmon version because it looked obvious: if an attacker is enumerating accounts and groups, they are probably going to run `net.exe`, `nltest.exe`, or `whoami.exe`.
 
-But the dataset had other ideas.
+The issue was that the dataset had different ideas.
 
-## The first rule and the problem
+## The First Rule and the Problem
 
-The first rule looked for the process-creation events I expected. I ran it and got zero hits. That was annoying because I knew the data set had account and group discovery in it.
+I built the Sysmon rule and ran it, and it gave me zero hits. That was annoying because I knew the discovery activity was in the dataset somewhere.
 
-The clue was that the discovery activity clearly existed in files named around 4798 and 4799, which are Windows Security events, not Sysmon process creation events. The rule was valid as a Sysmon rule, but it was looking at the wrong telemetry layer for this dataset.
+The clue was the filenames and Event IDs. The relevant evidence was showing up as 4798 and 4799, which are Windows Security events, not Sysmon process-creation events. The rule itself was not necessarily wrong, but it was pointed at the wrong telemetry layer for this dataset.
 
-This was the point where I stopped treating validation as a single pass and started treating it as part of debugging the actual telemetry path.
+That was the point where I stopped treating validation like a single pass and started treating it like debugging the actual data flow.
 
-## The real lesson
+## The Real Lesson
 
-The evidence was present, but it was stored in the Security log rather than captured as a process command. So I wrote a second rule that targeted Event IDs 4798 and 4799 in the Windows Security audit pipeline.
+The evidence existed, but it was stored in the Security log rather than being recorded as a process command. So I added a second rule targeting Event IDs 4798 and 4799 in the Windows audit pipeline.
 
-That made the difference. The companion rule matched the missing discovery activity and confirmed the issue was not logic failure in the first place. It was a logSource mismatch.
-
-This was a big realisation for me: a good Sigma rule still fails if it is looking at the wrong telemetry source.
+That second rule matched the missing activity, and it confirmed the real problem: not a logic failure, but a log source mismatch. A valid Sigma rule can still miss everything if it is looking at the wrong telemetry source.
 
 ## Validation
 
-The Windows audit rule matched the relevant account and group discovery events. That confirmed the idea and closed the gap.
+The Windows Security rule eventually matched the relevant account and group discovery events. That closed the gap and confirmed the hypothesis.
 
-## False positives
+## False Positive Considerations
 
-There is some legitimate admin activity in this area too. IT staff often review user groups or account membership. So this is not a one-to-one malicious signal. It works best when correlated with the wider context.
+There is legitimate admin activity here too. IT staff often enumerate users and groups for maintenance or troubleshooting. So this is not a one-to-one malicious signal by itself. It works best when correlated with the host, the user, and the wider surrounding event chain.
 
-## Overall takeaway
+## Overall Takeaway
 
-This rule set taught me that detection engineering is not just writing a good expression. It is also figuring out which telemetry actually contains the behavior you care about. That was probably the most important lesson in the whole project.
+This rule pair taught me one of the most important lessons in the whole project: detection engineering is not just about writing a good expression. It is also about knowing which telemetry actually contains the behavior you are trying to detect.

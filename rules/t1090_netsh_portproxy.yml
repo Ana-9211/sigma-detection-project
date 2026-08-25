@@ -4,7 +4,7 @@ status: experimental
 description: Detects use of netsh.exe to configure port forwarding rules, commonly used to create an internal proxy/relay for command-and-control or lateral pivoting
 references:
     - https://attack.mitre.org/techniques/T1090/001/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.command-and-control

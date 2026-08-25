@@ -1,0 +1,1 @@
+EventCode=10 TargetImage="*\\lsass.exe" (GrantedAccess="0x1010" OR GrantedAccess="0x1410" OR GrantedAccess="0x1438" OR GrantedAccess="0x143a" OR GrantedAccess="0x1fffff") NOT (SourceImage="*\\svchost.exe" OR SourceImage="*\\wininit.exe" OR SourceImage="*\\services.exe" OR SourceImage="*\\lsass.exe")

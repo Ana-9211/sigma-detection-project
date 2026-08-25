@@ -4,7 +4,7 @@ status: experimental
 description: Detects creation of a scheduled task via schtasks.exe, a common persistence mechanism
 references:
     - https://attack.mitre.org/techniques/T1053/005/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.persistence

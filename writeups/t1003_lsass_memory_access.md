@@ -1,27 +1,31 @@
 # T1003.001 — LSASS Memory Access
 
-This one was a good first rule because the logic is simple enough to understand and the event data makes sense. It is basically about a process reading LSASS memory, which is a very classic credential-dumping behavior.
+This was a pretty good first rule because the logic is simple enough to understand and the event data actually makes sense. The idea is that a process is reading LSASS memory, which is one of the classic credential-dumping behaviors.
 
-The important bit was realizing that not every process access to LSASS is suspicious. A lot of Windows system processes do touch LSASS, so the rule needs to narrow it down to the kind of access that looks like memory dumping rather than normal service behavior.
+I had to keep reminding myself that not every LSASS access is malicious. A lot of Windows system processes touch LSASS for legitimate reasons, so the rule needs to be narrower than just “target is LSASS”. The real signal is the memory access pattern and the process doing it.
 
-## What I was looking for
+## Technique
 
-The rule mostly watches process-access events where the target is LSASS and the granted access rights look like memory read access, not just general process interaction. The values like 0x1010 and 0x1fffff are the giveaway. That is the code path Mimikatz-like tools use when they want to pull credentials out of memory.
+This is basically the credential-dumping path. If a process reads memory from LSASS, it is usually trying to pull secrets out of the Windows authentication process. That is exactly the kind of behavior Mimikatz-style tooling uses.
 
-I also filtered out processes like svchost, wininit, services, and LSASS itself because those are expected system processes and would otherwise create a lot of noise.
+## Detection Logic
+
+The rule watches for process access events where the target is LSASS and the granted access rights look like memory read access instead of normal service interaction. The values like 0x1010 and 0x1fffff are a big clue here. They are not normal read operations for an everyday system process.
+
+I also excluded a few expected Windows processes like svchost, wininit, services, and LSASS itself. Otherwise the rule would be drowning in noise from normal OS behavior.
 
 ## Validation
 
-I tested it against the LSASS memory sample and it matched exactly once. The source was a Mimikatz-style process and the target was LSASS. That made the result feel real, because the event looked like the exact kind of behavior the rule is meant to catch.
+I tested it against the LSASS memory sample and it matched exactly once. The source process looked like a credential-dumping tool and the target was LSASS. That was the moment it felt real, because the sample matched the behavior the rule was meant to capture.
 
-The main thing I learned here is that the specific access right matters more than just seeing LSASS in the target field. If you only look for LSASS, you get a ton of false positives. The real signal is the memory-read behavior.
+This also taught me the main lesson for this technique: the access rights matter more than the target name alone. If I only looked for LSASS, the rule would instantly become useless because lots of Windows internals touch it.
 
-## False positives and caveats
+## False Positive Considerations
 
-This is one of those detections that can still get noisy in a real environment because EDR and AV tools legitimately inspect LSASS for security reasons. So I would not trust this by itself in production. It is a strong signal, but it still needs the usual context around process ancestry, user context, and what else was happening at the time.
+This one still has a real caveat in real environments because EDR, AV, and some security tooling legitimately inspect LSASS memory. So I would not treat an LSASS access alert as automatic malware by itself. It is a strong signal, but it still needs context such as the process name, parent process, user, and what else was happening around the event.
 
 ## Portability
 
-I also converted it into Splunk to make sure the same logic could be expressed outside Sigma. The conversion kept the same core idea: look for LSASS access events with suspicious granted access and exclude known system processes.
+I also converted it into Splunk so I could check whether the same logic translated outside Sigma. The converted rule kept the same idea: look for suspicious LSASS memory access and filter out the known system noise.
 
-This was one of the first rules where I started seeing how detection logic and telemetry logic are really connected. The rule is not just a pattern. It is a choice about which events are meaningful and which ones are normal system noise.
+This was one of the first times I saw how tied detection logic and telemetry logic really are. A rule is not just a string pattern. It is a deliberate decision about which events are meaningful and which ones are just normal system activity.

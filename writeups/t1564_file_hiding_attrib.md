@@ -1,23 +1,27 @@
 # T1564.001 — File Hiding via attrib.exe
 
-This was one of the cleanest detections in the whole project. It is simple but effective because the attacker is literally using the Windows file attribute utility to hide files or folders.
+This one was one of the cleaner detections in the project. It is simple but effective because the attacker is literally using the Windows file attribute utility to hide files or directories from normal view.
 
-## What the rule is catching
+## Technique
 
-The rule watches for attrib.exe with arguments that set hidden or system attributes. That is the tell that someone is trying to hide files from normal view.
+File hiding is a classic defense evasion technique. If an attacker marks files or folders as hidden or system files, they become much harder to spot during regular user browsing or quick investigation.
 
-It is a very direct technique, and the dataset had a clear sample for it. That made it easy to validate and easy to reason about.
+## Detection Logic
+
+The rule looks for `attrib.exe` being used with arguments that hide or change file attributes. It is a very direct signal because the command itself is the behavior being abused.
+
+This was nice because it was a narrow rule with a clear purpose. There was no need to overcomplicate it. The suspicious activity is the file-hiding action itself.
 
 ## Validation
 
-The rule matched exactly once, which was a strong result. It was one of those situations where the detection lined up cleanly with the actual telemetry, and it was satisfying because the signal was precise rather than broad.
+It matched exactly once in the dataset, which was a strong result. The rule hit the expected sample and the signal was precise instead of broad. That made it feel like a solid detection rather than a noisy general-purpose alert.
 
-This also made me realize that some of the best detections are not the complicated ones. Sometimes a small, narrow rule that matches a clear attacker action is more valuable than a noisy rule with a lot of hits.
+This also reinforced something I noticed earlier: sometimes the best rule is not the most complicated one. A small, specific detection can be much more useful than a noisy one with lots of hits.
 
-## False positives
+## False Positive Considerations
 
-There is still a small chance of false positives because admins and maintenance tools can also use attrib.exe. But the risk is much lower here than with something like PowerShell or WMI because the pattern is very specific.
+There is some risk of false positives because admins and maintenance tools can use `attrib.exe` for legitimate work. But the pattern is specific enough that the noise risk is much lower than it is for things like PowerShell, WMI, or broad process-creation matching.
 
-## Overall takeaway
+## Portability
 
-This was a good reminder that precise rules can be really valuable. A simple detection that cleanly matches the attacker behavior is often better than a complicated one that tries to catch too many things at once.
+The rule converted cleanly into Splunk without much extra work. It was a good example of a detection that is simple, precise, and still useful in a real environment.

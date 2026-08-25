@@ -4,7 +4,7 @@ status: experimental
 description: Detects successful logons with LogonType 10 (RemoteInteractive), indicating an RDP session, which can represent legitimate remote administration or lateral movement
 references:
     - https://attack.mitre.org/techniques/T1021/001/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.lateral-movement

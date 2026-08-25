@@ -4,7 +4,7 @@ status: experimental
 description: Detects use of attrib.exe to hide files, commonly used to conceal malicious artifacts on disk
 references:
     - https://attack.mitre.org/techniques/T1564/001/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.defense-evasion

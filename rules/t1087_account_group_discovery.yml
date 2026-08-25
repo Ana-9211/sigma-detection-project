@@ -5,7 +5,7 @@ description: Detects use of net.exe, nltest.exe, or whoami.exe with arguments co
 references:
     - https://attack.mitre.org/techniques/T1087/
     - https://attack.mitre.org/techniques/T1069/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.discovery

@@ -1,27 +1,27 @@
-# T1021.001 — RDP Logon
+# T1021.001 — Interactive Logon via RDP
 
-This one was useful because it showed me that a detection can be technically correct and still not be a strong alert on its own. RDP is a real attack technique, but it is also a normal admin feature. So the rule is really more of a visibility signal than something that screams malicious by itself.
+This one was useful because it showed me that a rule can be technically correct and still not be a strong alert by itself. RDP is a real attacker technique, but it is also a normal administrative feature. That means the detection is more of a visibility signal than a flashing “malware detected” alarm.
 
-## What the rule is trying to catch
+## Technique
 
-The main event here is a successful Windows logon, but I narrowed it to LogonType 10, which is the RemoteInteractive type used for RDP. That is the part that actually distinguishes RDP from normal interactive or service logons.
+Remote Desktop Protocol is a classic lateral movement technique. Attackers use it when they already have valid credentials and want to move around a compromised environment or access a machine interactively.
 
-I used the Windows Security audit pipeline for this one because Event ID 4624 belongs there, not in Sysmon process creation.
+## Detection Logic
 
-## Why this was a learning moment
+The rule targets Windows Security Event ID 4624 and filters specifically for LogonType 10, which is the RemoteInteractive logon type used for RDP. That filter is important because there are a lot of successful logons that are not RDP at all.
 
-At first I thought the rule would just be "logon happened, alert". But when I actually tested it, there were 87 successful logon events in the dataset and only 2 of them were RDP. That was the key finding. The LogonType filter was doing real work, and it was excluding a whole bunch of non-RDP logons that otherwise looked similar.
-
-That made me realize that a lot of detections are not about matching one obvious event. They are about filtering out all the normal variants so the suspicious one stands out.
+I used the Windows audit pipeline for this one because Event ID 4624 is part of the Security log, not Sysmon. That mattered a lot when I was validating it.
 
 ## Validation
 
-When I ran the rule, it matched 2 events. That is a low number, but that fits the nature of this technique. It is not a noisy indicator in the same way as PowerShell or WMI execution. It is more of a contextual signal that someone used RDP.
+I ran it against the attack sample set and it matched 2 events. At first that seemed low, but it actually made sense. There were 87 total successful logon events in the dataset, but only 2 of them were LogonType 10. So the LogonType filter was doing real work and excluding all the other non-RDP logon types.
 
-## False positives
+That was a good reminder that a lot of detections are not just “match the obvious thing.” They are also about filtering out the normal noise so the suspicious variant stands out.
 
-This is a big one. RDP is common in real environments. IT admins, remote jobs, support staff, and managed devices all use it. So if I saw a hit, I would not treat it as a direct malicious alert without checking source IP, host, time of day, and whether that machine is expected to use RDP.
+## False Positive Considerations
+
+This is a big one because legitimate admin work uses RDP all the time. IT support, remote workers, maintenance windows, and managed devices all create remote logons. So I would not take a hit as immediate malicious activity. I would check the source IP, the user, the host role, and whether that access pattern is expected.
 
 ## Portability
 
-The Sigma rule converted cleanly into Splunk using the Windows audit path. That part was straightforward, but again, the important lesson is not just conversion. It is understanding that the detection is useful only when paired with context.
+The Sigma rule converted cleanly into Splunk using the Windows audit path. The conversion itself was not complicated, but the real lesson was understanding that this rule is useful mostly as context and correlation, not as a standalone proof of compromise.

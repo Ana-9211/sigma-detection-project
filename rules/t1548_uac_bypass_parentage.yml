@@ -4,7 +4,7 @@ status: experimental
 description: Detects cmd.exe or powershell.exe spawned as a child of Windows binaries known to auto-elevate without a UAC prompt, a common UAC bypass pattern
 references:
     - https://attack.mitre.org/techniques/T1548/002/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.privilege-escalation

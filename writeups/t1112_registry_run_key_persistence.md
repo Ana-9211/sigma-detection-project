@@ -1,23 +1,25 @@
 # T1112 — Registry Run Key Persistence
 
-This one is a pretty classic persistence technique. You add something to the Run or RunOnce keys and Windows executes it automatically when the user or system starts up.
+This is a very standard persistence technique, and honestly it is one of the easiest ones to explain. The idea is that a program writes to a Run or RunOnce registry key so Windows launches it automatically during startup or logon.
 
-I liked this one because it is a very clear example of persistence that does not need to be hidden in a weird place. It is right there in the registry, which is why the detection is so straightforward.
+## Technique
 
-## What I was looking for
+Registry Run Key persistence is pretty classic attacker behavior. It does not need to be hidden in a strange location. The persistence is simply placed in a known startup location and then the system executes it for the attacker.
 
-The rule focuses on registry modifications under the common startup persistence hives. That is the actual persistence layer. The event itself is not necessarily suspicious unless the value points to something unexpected or malicious.
+## Detection Logic
 
-That is also why this kind of detection should be correlated with the executable path and the user context. A normal software update or legitimate app might write to the same registry areas.
+The rule looks at registry-modification events and focuses on the startup persistence paths that matter. It is not a blanket “anything in the registry is suspicious” rule. It is only interested in the areas that are relevant to Run key persistence.
+
+That is an important distinction because the registry is huge and a lot of legitimate software touches it. The question is whether the change matches a persistence pathway rather than just a generic registry write.
 
 ## Validation
 
-The dataset produced the expected kind of hits for this technique. They lined up with the idea that something was being added to run at startup, which is exactly the behavior the rule is meant to catch.
+The dataset produced hits that matched this persistence behavior, which is exactly what I expected. That made the rule feel solid because the detections lined up with the known attack pattern.
 
-## False positives
+## False Positive Considerations
 
-This is one of those detections where a lot of legitimate software touches the same keys. Installers, management tools, and vendor software can also add Run entries. So I would not treat a match as definitive proof of malware by itself.
+This is a major one. Legitimate installers, enterprise tooling, and vendor software often modify Run keys. A match by itself is not proof of malware. I would check the value name, the executable path, the parent process, the user context, and whether that software is expected on the machine.
 
-## Extra note
+## Extra Note
 
-There was an ATT&CK tag warning in Sigma validation, but it looked cosmetic rather than a real logic issue. The rule itself was still doing the detection work it was intended to do. That was a useful reminder that tooling metadata issues and detection logic are not always the same thing.
+There was an ATT&CK tag warning from Sigma validation, but it looked cosmetic rather than an actual logic failure. The rule still evaluated correctly and the detection behavior was still valid. That was a useful reminder that tooling warnings and real detection quality are not always the same thing.

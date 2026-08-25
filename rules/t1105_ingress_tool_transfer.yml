@@ -4,7 +4,7 @@ status: experimental
 description: Detects use of certutil.exe or bitsadmin.exe to download files, a common living-off-the-land technique for retrieving second-stage payloads
 references:
     - https://attack.mitre.org/techniques/T1105/
-author: Ysa
+author: Anagha N
 date: 2026-08-24
 tags:
     - attack.command-and-control
