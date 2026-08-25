@@ -1,26 +1,23 @@
 # T1112 — Registry Run Key Persistence
 
-## Technique
-Registry Run key persistence is a classic Windows persistence vector. By adding an entry under the Run or RunOnce registry keys, an attacker can trigger execution at user or system logon.
+This one is a pretty classic persistence technique. You add something to the Run or RunOnce keys and Windows executes it automatically when the user or system starts up.
 
-## Detection Logic
-The Sigma rule targets suspicious registry modifications under persistence-related hive paths. The main detection logic is designed to catch:
+I liked this one because it is a very clear example of persistence that does not need to be hidden in a weird place. It is right there in the registry, which is why the detection is so straightforward.
 
-- modifications to `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`
-- modifications to `HKLM\Software\Microsoft\Windows\CurrentVersion\Run`
-- RunOnce and similar startup persistence locations
-- execution chains that are immediately tied to these persistence changes
+## What I was looking for
 
-This is a direct detection of the persistence registry layer and is aligned with how malware and persistence tooling often establish startup execution.
+The rule focuses on registry modifications under the common startup persistence hives. That is the actual persistence layer. The event itself is not necessarily suspicious unless the value points to something unexpected or malicious.
+
+That is also why this kind of detection should be correlated with the executable path and the user context. A normal software update or legitimate app might write to the same registry areas.
 
 ## Validation
-The rule achieved the expected validation result in the dataset and generated 7 hits that aligned with registry persistence behavior. These were consistent with the intended ATT&CK technique.
 
-## False Positive Note
-Administrative software often sets registry startup entries for legitimate applications and maintenance tools. The practical mitigation is to tune for unusual execution paths, user-controlled values, or persistence entries that do not correspond to approved software baselines.
+The dataset produced the expected kind of hits for this technique. They lined up with the idea that something was being added to run at startup, which is exactly the behavior the rule is meant to catch.
 
-## Special Note
-The ATT&CK tag warning observed during validation is a cosmetic Sigma CLI issue rather than evidence of a faulty detection. The rule itself remains valid; the issue is display-level metadata rather than logic failure.
+## False positives
 
-## Outcome
-This is a reliable persistence detection pattern and a valuable example of the need to validate both rule logic and tooling-level metadata when working with Sigma-based pipelines.
+This is one of those detections where a lot of legitimate software touches the same keys. Installers, management tools, and vendor software can also add Run entries. So I would not treat a match as definitive proof of malware by itself.
+
+## Extra note
+
+There was an ATT&CK tag warning in Sigma validation, but it looked cosmetic rather than a real logic issue. The rule itself was still doing the detection work it was intended to do. That was a useful reminder that tooling metadata issues and detection logic are not always the same thing.

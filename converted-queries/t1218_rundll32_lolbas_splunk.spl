@@ -1,0 +1,1 @@
+EventID=1 Image="*\\rundll32.exe" CommandLine IN ("*zipfldr*", "*shdocvw*", "*advpack*", "*pcwutl*", "*ExtExport*", "*comsvcs*", "*MiniDump*")

@@ -1,76 +1,33 @@
-# T1055 — Process Injection via CreateRemoteThread
+# T1055 — CreateRemoteThread Injection
 
-## Technique
+This one was one of the more interesting rules because it taught me that rule logic can look correct and still break in a subtle way. I thought I had the filters right, but there was a bug in how I compared the source and target fields.
 
-CreateRemoteThread injection occurs when one process creates a thread that executes code within the memory space of another process. Attackers can abuse this mechanism to execute malicious code under the context of a legitimate process, helping them evade detection and blend malicious activity into a trusted process.
+## What I was trying to detect
 
-## Detection Logic
+CreateRemoteThread injection is when one process creates a thread inside another process. That is a classic way to run code under someone else's memory space, which is exactly the kind of thing malware does to hide or blend in.
 
-The rule looks for Sysmon Event ID 8, which records CreateRemoteThread activity. The primary selection is therefore:
+I was looking at Sysmon Event ID 8, which records this kind of remote thread creation. The suspicious part is not just that a thread was created. It is that a process like PowerShell or some other tool created a thread inside a normal user process such as notepad.
 
-```yaml
-selection:
-    EventID: 8
-```
+## The filter issue I had to fix
 
-Two separate filter blocks are used to remove expected activity:
+I had two filters in the rule. One excluded known legit source processes like svchost, services, wininit, and MsMpEng. The other tried to exclude self-process events by comparing SourceImage to TargetImage.
 
-- `filter_knownsource` excludes known legitimate source processes such as `svchost.exe`, `services.exe`, `wininit.exe`, and `MsMpEng.exe`.
-- `filter_self` excludes self-process activity by comparing `SourceImage` with `TargetImage` using Sigma's field-reference modifier:
+The problem was that I initially used a literal comparison instead of a field-to-field comparison. That meant the rule did not actually compare the two fields properly. It just checked whether the string looked similar instead of whether the values were equal.
 
-```yaml
-filter_self:
-    SourceImage|fieldref: TargetImage
-```
-
-The field-reference modifier is important. An earlier version used:
-
-```yaml
-SourceImage: 'TargetImage'
-```
-
-which does not compare the two fields. It checks whether `SourceImage` literally contains the string `TargetImage`, so it would silently fail to identify self-process relationships. Using `|fieldref` performs the intended field-to-field comparison.
-
-The condition was refined twice during development:
-
-```yaml
-condition: selection and not filter_knownsource and not filter_self
-```
-
-An earlier version used `selection and not 1 of filter_*`, which is logically equivalent (both filters are OR'd together for exclusion), but the Splunk backend could not convert an OR'd field-reference comparison. Rewriting the condition using De Morgan's Law — `not (A or B)` is equivalent to `(not A) and (not B)` — produced identical detection logic while avoiding the unsupported OR/fieldref combination during Splunk conversion.
+The fix was to use the fieldref approach so that Sigma compares SourceImage and TargetImage correctly. This is the kind of mistake that would be easy to miss if I had only looked at the green validation output and not the actual raw event values.
 
 ## Validation
 
-- Tested against: `test-logs\EVTX-ATTACK-SAMPLES\Execution\Sysmon_meterpreter_ReflectivePEInjection_to_notepad_.evtx`
-- Result: 9 hits
-- SourceImage: `powershell.exe`
-- TargetImage: `notepad.exe`
+I tested the rule against the Meterpreter reflective PE injection sample and it matched 9 events. The source was PowerShell and the target was notepad. That is the kind of process relationship that stands out.
 
-The detected events were not excluded by either filter. `powershell.exe` does not match the known legitimate source list, and it is different from `notepad.exe`, so the self-process filter does not apply.
+The most important thing was the fact that all 9 events shared the same source and target process IDs. They were part of one injection sequence, not 9 separate random events. That made the pattern much more believable.
 
-The activity is suspicious because `notepad.exe` is an ordinary user application and receiving remote threads from a PowerShell process is an unusual process relationship. In the supplied test case, the filename identifies the scenario as a Meterpreter Reflective PE injection example.
+## False positives
 
-All nine detected events shared the same `SourceProcessGuid` and `TargetProcessGuid` and occurred within approximately 15 milliseconds of one another. This indicates that the nine detections belong to the same source/target process relationship and represent a single injection sequence that created multiple remote threads, rather than nine unrelated injection attempts.
+This one definitely has a false positive risk. Debuggers, EDR, and some admin tools can create remote threads for legitimate reasons. That is why I excluded a few known system processes and why the rule should still be used with context.
 
-## False Positive Considerations
-
-Legitimate software can use CreateRemoteThread for purposes unrelated to malicious injection. Potential false positives include:
-
-- Debuggers that interact with another process during analysis.
-- Monitoring or instrumentation tools.
-- Certain installers or legitimate administrative software.
-- EDR/AV products that inject into processes for security monitoring or instrumentation.
-
-The rule therefore excludes several known legitimate source processes (`svchost.exe`, `services.exe`, `wininit.exe`, and `MsMpEng.exe`). The exclusion list should still be tuned for the specific environment because legitimate security products and other software may use remote-thread mechanisms that are not represented by these exclusions.
+The thing I learned here is that the rule is not trying to say a remote thread always means malware. It is trying to flag a suspicious relationship that deserves investigation.
 
 ## Portability
 
-The Sigma rule was converted to Splunk SPL using the Sysmon processing pipeline:
-
-```text
-sigma convert -t splunk -p sysmon rules/t1055_createremotethread_injection.yml > converted-queries/t1055_createremotethread_injection_splunk.spl
-```
-
-The resulting query is stored as:
-
-`converted-queries/t1055_createremotethread_injection_splunk.spl`
+I converted the rule to Splunk as well. The logic still held up in the converted form, which was useful, but the bigger lesson was the field comparison bug. That was the kind of mistake that would not have been caught by just trusting the output.

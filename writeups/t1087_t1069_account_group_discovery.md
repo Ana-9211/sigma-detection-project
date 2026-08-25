@@ -1,34 +1,33 @@
-# T1087/T1069 — Account and Group Discovery
+# T1087 and T1069 — Account and Group Discovery
 
-## Technique
-Account and group discovery is a core Windows discovery technique used to identify local user accounts, groups, memberships, and trust relationships. Attackers use this to understand privilege boundaries, target lateral movement, and find weak or highly privileged accounts.
+This was one of the best examples of a rule failing for the right reason. I first wrote the Sysmon version because it seemed obvious: if an attacker is enumerating accounts and groups, they will probably run net.exe, whoami.exe, or similar commands.
 
-## Detection Logic — Rule A (Sysmon)
-The first rule attempts to catch account and group discovery by monitoring command-line execution of discovery tooling such as `net.exe`, `whoami.exe`, and related account enumeration utilities. This approach is valid when the telemetry is captured via process creation events and the command line contains the enumeration pattern.
+But the dataset had other ideas.
 
-In practice, the rule logic is designed to match the sequence of commands that reveal local users and groups, such as enumeration of users, groups, and security policy information.
+## The first rule and the problem
 
-## Validation — Rule A
-The Sysmon-based rule returned 0 hits across the validation set, which was investigated rather than accepted as a pass. At face value, that outcome suggested the rule was logically fine but likely not aligned with the actual evidence source available in the dataset.
+The first rule looked for the process-creation events I expected. I ran it and got zero hits. That was annoying because I knew the data set had account and group discovery in it.
 
-## The Gap
-The key problem was not a bad Sigma expression; it was a telemetry mismatch. The dataset contained evidence for local group and account enumeration in files such as `4798` and `4799` Security log events, but those events never reached the Sysmon process-creation rule path. The validation process confirmed that the rule saw zero relevant events because the log source itself was filtered before matching occurred.
+The clue was that the discovery activity clearly existed in files named around 4798 and 4799, which are Windows Security events, not Sysmon process creation events. The rule was valid as a Sysmon rule, but it was looking at the wrong telemetry layer for this dataset.
 
-The debug output showed the concrete issue: `Total events processed: 0` for the rule path under the Sysmon pipeline. In other words, the relevant evidence existed, but in a different telemetry layer. This invalidated the assumption that the technique was simply absent; it was present in the dataset but captured through Windows Security auditing, not through Sysmon process creation.
+This was the point where I stopped treating validation as a single pass and started treating it as part of debugging the actual telemetry path.
 
-## Detection Logic — Rule B (Windows Security Auditing, companion rule)
-A companion Sigma rule was therefore written for Windows Security auditing, specifically targeting Event IDs 4798 and 4799. These events document local group enumeration and group membership discovery in the Security log and map directly to the attacker behavior in this dataset.
+## The real lesson
 
-This is a necessary split because Sigma rules are constrained by log source. One technique can legitimately require multiple rules when the relevant evidence is split across different telemetry sources.
+The evidence was present, but it was stored in the Security log rather than captured as a process command. So I wrote a second rule that targeted Event IDs 4798 and 4799 in the Windows Security audit pipeline.
 
-## Validation — Rule B
-The Windows Security auditing rule produced 8 hits, including the files that the original Sysmon rule missed entirely. This confirmed the hypothesis and closed the coverage gap. The result was not a random improvement; it validated a real, data-driven diagnosis.
+That made the difference. The companion rule matched the missing discovery activity and confirmed the issue was not logic failure in the first place. It was a logSource mismatch.
 
-## Lesson
-A green Sigma validation result cannot tell you whether the required evidence is actually present in your data. This case demonstrates a larger principle of detection engineering: the correct telemetry source matters as much as the detection logic itself. When the dataset is built around a different log source, the rule must follow the evidence — not the assumptions.
+This was a big realisation for me: a good Sigma rule still fails if it is looking at the wrong telemetry source.
 
-## False Positive Note
-The primary false positive risk is legitimate administrative account review, security auditing, and internal help-desk enumeration. That is manageable by correlating with the context of active user behavior, maintenance windows, or approved IT workflows.
+## Validation
 
-## Outcome
-This is the strongest example in the project of a detection gap being diagnosed and closed through evidence rather than guesswork. It shows that understanding the dataset, telemetry source, and log pipeline is often the real difference between a ruleset that looks complete and one that is actually operationally useful.
+The Windows audit rule matched the relevant account and group discovery events. That confirmed the idea and closed the gap.
+
+## False positives
+
+There is some legitimate admin activity in this area too. IT staff often review user groups or account membership. So this is not a one-to-one malicious signal. It works best when correlated with the wider context.
+
+## Overall takeaway
+
+This rule set taught me that detection engineering is not just writing a good expression. It is also figuring out which telemetry actually contains the behavior you care about. That was probably the most important lesson in the whole project.

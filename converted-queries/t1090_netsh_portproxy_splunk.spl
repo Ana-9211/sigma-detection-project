@@ -1,0 +1,1 @@
+EventID=1 Image="*\\netsh.exe" CommandLine IN ("*interface portproxy add*", "*portproxy add v4tov4*", "*portproxy add v4tov6*")

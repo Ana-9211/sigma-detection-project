@@ -1,0 +1,1 @@
+EventID=1 Image IN ("*\\cmd.exe", "*\\powershell.exe") ParentImage IN ("*\\fodhelper.exe", "*\\eventvwr.exe", "*\\sdclt.exe", "*\\cmstp.exe", "*\\CompMgmtLauncher.exe", "*\\slui.exe", "*\\WSReset.exe")

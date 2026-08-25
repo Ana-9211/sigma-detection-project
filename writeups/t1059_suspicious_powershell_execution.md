@@ -1,70 +1,35 @@
-# T1059.001 — Suspicious PowerShell Execution
+# T1059.001 — Suspicious PowerShell
 
-## Technique
+This one was a good example of why detection engineering is not just writing a list of keywords. I started with a bunch of obvious PowerShell flags, and then I found out one of them was messing up the whole rule.
 
-This rule detects suspicious PowerShell execution involving obfuscation, encoded commands, hidden execution, and download cradles. These techniques are commonly used to conceal PowerShell activity or retrieve and execute second-stage payloads.
+## What I originally thought
 
-## Detection Logic
+I wanted to catch suspicious PowerShell execution patterns like encoded commands, hidden windows, download strings, and IEX. That is a common attacker behavior and it is easy to understand.
 
-The rule targets Sysmon Event ID 1 (Process Creation) and requires both:
+The first version included a bunch of indicators, including -nop. That looked harmless at first because -nop is a real PowerShell flag, but it turned out to be a bad choice because it is also a substring inside -NoProfile.
 
-1. `Image` to end with `\powershell.exe` or `\pwsh.exe`
-2. `CommandLine` to contain one of the suspicious indicators:
+## The bug that showed up later
 
-   * `-enc`
-   * `-EncodedCommand`
-   * `-w hidden`
-   * `-windowstyle hidden`
-   * `IEX`
-   * `DownloadString`
-   * `Invoke-Expression`
-   * `Net.WebClient`
+This was a really useful bug to catch. The rule matched a bunch of benign PowerShell commands because -nop appeared inside a longer argument, -NoProfile. That meant the rule was matching strings that were not actually the suspicious flag I wanted.
 
-An earlier version of the rule also included `-nop` as an indicator. During testing, this indicator was removed because of a substring collision with `-NoProfile` — a completely benign, extremely common PowerShell flag. Since `-nop` is a literal substring of `-NoProfile`, the `contains` modifier matched it, producing 2 false-positive hits out of the original 6. This is an important limitation of broad `CommandLine|contains` matching: short indicators can match legitimate longer arguments.
+It was not a Sigma syntax problem. It was a logic problem caused by using a broad string match on a short substring. The lesson here is that command-line detection is full of tiny traps like this.
 
-The final rule was validated successfully with 0 errors, 0 condition errors, and 0 validation issues.
+## What I changed
+
+I removed the -nop indicator and kept the rule focused on the more clearly malicious patterns. The final version still catches encoded commands, hidden execution, download strings, and IEX patterns, but it is much less likely to flag normal PowerShell behavior.
+
+This was one of the moments where I realized that an alert is only useful if it catches what you want and not a bunch of harmless script noise.
 
 ## Validation
 
-* Tested against: Full `EVTX-ATTACK-SAMPLES` repository
-* Files processed: 278
-* Events processed: 1,501
-* Result: 4 HIGH-severity hits across 3 files (down from 6 before the `-nop` fix)
-* Rule coverage: 1/1 rules matched (100%)
+When I reran it, the rule still matched the suspicious samples I expected, but the false positive count dropped. It matched the suspicious PowerShell execution patterns in the dataset without the noisy benign cases.
 
-### File 1 — IIS discovery
-`discovery_sysmon_1_iis_pwd_and_config_discovery_appcmd.evtx`
+One sample was especially interesting because it was a testing script designed to mimic attacker behavior in a safe environment. That showed me a subtle point: a command line can look malicious and still not be malicious by intent. The rule itself was doing what it was supposed to do, but context still matters.
 
-PowerShell spawned from `w3wp.exe` (IIS worker process), with an encoded command containing a real payload. PowerShell execution originating from an IIS worker process, combined with encoded command content, is an unusual process relationship and execution pattern consistent with a web-shell-driven attack.
+## False positives
 
-### File 2 — EDR Testing Script
-`panache_sysmon_vs_EDRTestingScript.evtx`
-
-The command line matched the suspicious PowerShell pattern (`Net.WebClient` + `IEX`), but the underlying tool is [op7ic/EDR-Testing-Script](https://github.com/op7ic/EDR-Testing-Script), a public tool built specifically to safely reproduce attacker-like command-line patterns for testing detection tooling.
-
-> The detection is a true positive for the behavioral pattern, but the underlying activity is benign by intent.
-
-This demonstrates why command-line detections should not automatically be treated as proof of malicious activity.
-
-### File 3 — PsExec/Meterpreter
-`LM_sysmon_psexec_smb_meterpreter.evtx`
-
-2 detections. PowerShell execution associated with a PsExec/Meterpreter sequence, using a gzip/base64-compressed loader launched via `cmd.exe /b /c start /b /min powershell.exe -nop -w hidden -noni -c ...`.
-
-## False Positive Considerations
-
-The main false-positive issue discovered during validation was the `-nop` / `-NoProfile` substring collision, described above. The fix was to remove `-nop` from the indicator list rather than attempt to special-case every `-NoProfile` invocation.
-
-There is also an important distinction demonstrated by `panache_sysmon_vs_EDRTestingScript.evtx`: an EDR-testing tool can intentionally reproduce attacker-like PowerShell patterns. The rule correctly identifies the pattern, but the event can still be benign in context.
-
-Legitimate administrative scripts, scheduled tasks, deployment systems, and configuration-management tools can also invoke PowerShell with unusual command-line arguments. Consequently, the detection should be investigated alongside process ancestry, user context, execution location, and surrounding events rather than treated as definitive proof of malicious execution.
+This is a classic example of a rule that needs context. PowerShell is used all the time by admins, deployment tools, and software automation. If I saw a hit, I would want to check who spawned it, where the parent process came from, and whether the command line was part of a legitimate admin workflow or a suspicious payload.
 
 ## Portability
 
-The Sigma rule was successfully converted to Splunk SPL using the Sysmon processing pipeline:
-
-```text
-sigma convert -t splunk -p sysmon rules/t1059_suspicious_powershell_execution.yml > converted-queries/t1059_suspicious_powershell_execution_splunk.spl
-```
-
-The resulting SPL preserves the core detection logic: identify PowerShell process creation events and match suspicious command-line indicators.
+I converted it to Splunk as well. The logic transferred fine, and the bigger takeaway was the same as before: string matching is powerful, but it needs to be careful and specific.

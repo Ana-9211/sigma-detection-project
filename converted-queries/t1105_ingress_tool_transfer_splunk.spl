@@ -1,0 +1,1 @@
+EventID=1 Image IN ("*\\certutil.exe", "*\\bitsadmin.exe") CommandLine IN ("*urlcache*", "*-split*", "*/transfer*", "*http*")

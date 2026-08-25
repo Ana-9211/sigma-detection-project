@@ -1,78 +1,27 @@
-# T1003.001 — LSASS Memory Credential Dumping
+# T1003.001 — LSASS Memory Access
 
-## Technique
+This one was a good first rule because the logic is simple enough to understand and the event data makes sense. It is basically about a process reading LSASS memory, which is a very classic credential-dumping behavior.
 
-An attacker can attempt to access the memory of the Windows Local Security Authority Subsystem Service (LSASS) process to obtain credentials handled by LSASS. This detection identifies suspicious processes requesting high levels of access to `lsass.exe`, which can indicate credential-dumping activity.
+The important bit was realizing that not every process access to LSASS is suspicious. A lot of Windows system processes do touch LSASS, so the rule needs to narrow it down to the kind of access that looks like memory dumping rather than normal service behavior.
 
-## Detection Logic
+## What I was looking for
 
-The Sigma rule detects Sysmon Event ID 10 (Process Access) events where:
+The rule mostly watches process-access events where the target is LSASS and the granted access rights look like memory read access, not just general process interaction. The values like 0x1010 and 0x1fffff are the giveaway. That is the code path Mimikatz-like tools use when they want to pull credentials out of memory.
 
-* `TargetImage` ends in `\lsass.exe`.
-* `GrantedAccess` is one of the following values:
-
-  * `0x1010`
-  * `0x1410`
-  * `0x1438`
-  * `0x143a`
-  * `0x1fffff`
-* `SourceImage` is excluded when it ends in:
-
-  * `\svchost.exe`
-  * `\wininit.exe`
-  * `\services.exe`
-  * `\lsass.exe`
-
-These `GrantedAccess` values are Windows process access-right hex codes corresponding to `PROCESS_QUERY_INFORMATION | PROCESS_VM_READ` and related combinations — in plain terms, "read this process's memory." That's the specific capability Mimikatz-style credential dumpers request, which is why it's the detection signal rather than any process access to lsass.exe at all.
-
-The resulting Splunk SPL conversion is:
-
-```text
-EventID=10 TargetImage="*\\lsass.exe" GrantedAccess IN ("0x1010", "0x1410", "0x1438", "0x143a", "0x1fffff") NOT (SourceImage IN ("*\\svchost.exe", "*\\wininit.exe", "*\\services.exe", "*\\lsass.exe"))
-```
-
-The Sigma rule was validated successfully with 0 errors, 0 condition errors, and 0 validation issues.
+I also filtered out processes like svchost, wininit, services, and LSASS itself because those are expected system processes and would otherwise create a lot of noise.
 
 ## Validation
 
-- Tested against: `sysmon_10_lsass_mimikatz_sekurlsa_logonpasswords.evtx`
-- Result: 1/1 match, HIGH severity
-- ATT&CK technique: T1003.001
-- Events processed: 1
-- Detections: 1 HIGH
-- Rule coverage: 1/1 rules matched (100%)
-- SourceImage observed: `C:\Users\IEUser\Desktop\mimikatz_trunk\Win32\mimikatz.exe`
+I tested it against the LSASS memory sample and it matched exactly once. The source was a Mimikatz-style process and the target was LSASS. That made the result feel real, because the event looked like the exact kind of behavior the rule is meant to catch.
 
-The detected event had:
+The main thing I learned here is that the specific access right matters more than just seeing LSASS in the target field. If you only look for LSASS, you get a ton of false positives. The real signal is the memory-read behavior.
 
-- EventID: `10`
-- SourceImage: `C:\Users\IEUser\Desktop\mimikatz_trunk\Win32\mimikatz.exe`
-- TargetImage: `C:\Windows\system32\lsass.exe`
-- GrantedAccess: `0x1010`
+## False positives and caveats
 
-The event's call trace also contains references to `mimikatz.exe`. The detection therefore successfully identified the expected LSASS memory-access event in the supplied Mimikatz test log.
-
-## False Positive Considerations
-
-Legitimate Windows processes may access LSASS during normal system operation, so detecting every process that accesses `lsass.exe` could generate false positives.
-
-The rule excludes several known Windows system processes:
-
-- `svchost.exe` — commonly hosts Windows services and may legitimately interact with system processes.
-- `wininit.exe` — a core Windows initialization process that may legitimately interact with LSASS.
-- `services.exe` — manages Windows services and may legitimately access system processes.
-- `lsass.exe` itself — self-access is excluded because the rule is intended to identify another process accessing LSASS.
-
-One category not covered by these exclusions: EDR/AV agents (for example, CrowdStrike or Defender ATP) also legitimately read lsass memory for monitoring purposes. This rule does not exclude them, so any deployment would need environment-specific tuning to add the organization's actual security tooling to the exclusion list.
-
-These exclusions reduce expected noise while retaining suspicious LSASS access from other processes.
+This is one of those detections that can still get noisy in a real environment because EDR and AV tools legitimately inspect LSASS for security reasons. So I would not trust this by itself in production. It is a strong signal, but it still needs the usual context around process ancestry, user context, and what else was happening at the time.
 
 ## Portability
 
-The Sigma rule was successfully converted to Splunk SPL using the Sysmon processing pipeline.
+I also converted it into Splunk to make sure the same logic could be expressed outside Sigma. The conversion kept the same core idea: look for LSASS access events with suspicious granted access and exclude known system processes.
 
-The converted query is stored in:
-
-`converted-queries/t1003_lsass_memory_access_splunk.spl`
-
-The Splunk query preserves the original detection logic by identifying Sysmon Event ID 10 events targeting `lsass.exe`, checking for the specified `GrantedAccess` values, and excluding the specified legitimate process sources.
+This was one of the first rules where I started seeing how detection logic and telemetry logic are really connected. The rule is not just a pattern. It is a choice about which events are meaningful and which ones are normal system noise.

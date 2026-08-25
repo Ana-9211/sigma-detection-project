@@ -1,22 +1,23 @@
-# T1053.005 — Scheduled Task Creation
+# T1053.005 — Scheduled Tasks
 
-## Technique
-Scheduled Task Creation is a common persistence and execution mechanism on Windows. Attackers frequently use `schtasks.exe`, `at.exe`, or task XML payloads to establish recurring execution and maintain footholds.
+This was one of the easier ones to understand once I saw the actual process execution. Scheduled tasks are a standard Windows feature, but attackers abuse them for persistence and delayed execution. The rule is basically about catching the creation of the task itself, not just the payload that eventually runs.
 
-## Detection Logic
-The Sigma rule focuses on the execution of task creation tooling and task-first operational patterns. The primary indicators are:
+## What I was looking for
 
-- process execution of `schtasks.exe`
-- creation or modification of scheduled tasks
-- command-line patterns consistent with persistence, silent execution, or remote scheduling
+The rule focuses on the task creation utility and the command-line behavior around it. The idea is to catch the moment when a system is being configured to run something automatically in the future.
 
-This is the classic detection pattern for persistence through task scheduling because it identifies the orchestration layer rather than just the eventual payload execution.
+I was not trying to detect every scheduled task on the host. That would be useless. I was trying to catch the patterns that look like persistence or execution staging rather than normal admin maintenance.
 
 ## Validation
-The validation set produced 7 hits aligned with the expected technique. The rule reached the intended task-creation behavior and captured the relevant operational pattern with a clean signal.
 
-## False Positive Note
-The main false positive risk is legitimate administrative use of scheduled tasks in software maintenance, patching, or operational automation. This is manageable when the rule is scoped around suspicious command patterns, hidden tasks, or execution of high-risk child processes.
+The detection matched what I expected in the dataset. It gave me a clean signal that scheduled-task creation was happening in the attack samples, which makes sense because scheduled tasks are such a common persistence mechanism.
 
-## Outcome
-This is a solid detection that maps well to attacker behavior in the test corpus and reflects a standard Windows persistence pattern that defenders should monitor closely.
+The important thing I learned with this one is that not all scheduled tasks are malicious, but the creation pattern is still a useful signal when paired with the command line and the executable being launched.
+
+## False positives
+
+The main false positive risk is system maintenance, patching, and enterprise automation. A lot of legitimate software creates scheduled tasks. So this rule is best used with context rather than as a stand-alone alert.
+
+## Overall impression
+
+This was a solid rule because it matched a clear attacker behavior and was easy to reason about. It also reinforced the idea that many Windows persistence techniques are not mysterious. They are just regular admin features being abused.

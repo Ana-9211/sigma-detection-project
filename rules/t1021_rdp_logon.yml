@@ -1,0 +1,22 @@
+﻿title: Interactive Logon via Remote Desktop Protocol
+id: 0d1e2f3a-4b5c-4d6e-7f8a-9b0c1d2e3f4a
+status: experimental
+description: Detects successful logons with LogonType 10 (RemoteInteractive), indicating an RDP session, which can represent legitimate remote administration or lateral movement
+references:
+    - https://attack.mitre.org/techniques/T1021/001/
+author: Ysa
+date: 2026-08-24
+tags:
+    - attack.lateral-movement
+    - attack.t1021.001
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4624
+        LogonType: 10
+    condition: selection
+falsepositives:
+    - Legitimate remote administration via RDP is extremely common; must be correlated with expected admin activity and source IP
+level: low
