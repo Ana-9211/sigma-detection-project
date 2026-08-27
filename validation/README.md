@@ -12,7 +12,7 @@ are evidence of the recorded run, not a substitute for rerunning the corpus.
 ## Reproduce the syntax check
 
 ```text
-python -m pip install sigma-cli
+python -m pip install sigma-cli==3.1.0
 sigma check rules
 ```
 
