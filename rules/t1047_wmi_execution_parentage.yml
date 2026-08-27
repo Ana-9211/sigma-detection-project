@@ -1,4 +1,4 @@
-﻿title: Process Spawned by WMI Provider Host (Possible Remote WMI Execution)
+title: Process Spawned by WMI Provider Host (Possible Remote WMI Execution)
 id: 2f3a4b5c-6d7e-4f8a-9b0c-1d2e3f4a5b6c
 status: experimental
 description: Detects a process created with WmiPrvSE.exe as its parent, consistent with remote or local WMI-based command execution (e.g. wmiexec, PowerShell WMI cmdlets, Impacket wmiexec.py)

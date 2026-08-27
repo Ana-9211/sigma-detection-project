@@ -1,0 +1,60 @@
+[{
+  "title": "Port Forwarding Configuration via netsh interface portproxy",
+  "id": "3a4b5c6d-7e8f-4a9b-0c1d-2e3f4a5b6c7d",
+  "description": "Detects use of netsh.exe to configure port forwarding rules, commonly used to create an internal proxy/relay for command-and-control or lateral pivoting",
+  "sigmafile": "",
+  "sigma": [
+    "SELECT * FROM logs WHERE EventID=1 AND (Image LIKE '%\\\\netsh.exe' ESCAPE '\\' AND (CommandLine LIKE '%interface portproxy add%' ESCAPE '\\' OR CommandLine LIKE '%portproxy add v4tov4%' ESCAPE '\\' OR CommandLine LIKE '%portproxy add v4tov6%' ESCAPE '\\'))"
+  ],
+  "rule_level": "medium",
+  "tags": [
+    "attack.command-and-control",
+    "attack.t1090.001"
+  ],
+  "count": 1,
+  "matches": [
+    {
+      "row_id": 572,
+      "Channel": "Microsoft-Windows-Sysmon/Operational",
+      "CommandLine": "netsh  interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=8000 connectaddress=192.168.1.1",
+      "Company": "Microsoft Corporation",
+      "Computer": "MSEDGEWIN10",
+      "CurrentDirectory": "C:\\Windows\\system32\\",
+      "Description": "Network Command Shell",
+      "EventID": 1,
+      "EventRecordID": 4955,
+      "Execution_ProcessID": 2640,
+      "Execution_ThreadID": 3476,
+      "FileVersion": "10.0.17763.1 (WinBuild.160101.0800)",
+      "Guid": "5770385F-C22A-43E0-BF4C-06F5698FFBD9",
+      "Hashes": "SHA1=21190DE3629B7A40409897CAF9563EB1EE1944B2,MD5=758B8449357017A158163ECC0E5E52B2,SHA256=D70D165B6706C61C56F2CA91307F4BBDB9846ACAE1DA3CFD84BF978FFB21AF23,IMPHASH=90B4317BE51850B8EF9F14EB56FB7DDC",
+      "IMPHASH": "90B4317BE51850B8EF9F14EB56FB7DDC",
+      "Image": "C:\\Windows\\System32\\netsh.exe",
+      "IntegrityLevel": "High",
+      "Keywords": "0x8000000000000000",
+      "Level": 4,
+      "LogonGuid": "747F3D96-6053-5D3F-0000-002082314100",
+      "LogonId": "0x413182",
+      "MD5": "758B8449357017A158163ECC0E5E52B2",
+      "Opcode": 0,
+      "OriginalLogfile": "panache_sysmon_vs_EDRTestingScript.evtx",
+      "ParentCommandLine": "cmd  /c netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=8000 connectaddress=192.168.1.1",
+      "ParentImage": "C:\\Windows\\System32\\cmd.exe",
+      "ParentProcessGuid": "747F3D96-6646-5D3F-0000-001029398B00",
+      "ParentProcessId": 6760,
+      "ProcessGuid": "747F3D96-6647-5D3F-0000-001057768B00",
+      "ProcessId": 4028,
+      "Product": "Microsoft® Windows® Operating System",
+      "Provider_Name": "Microsoft-Windows-Sysmon",
+      "SHA1": "21190DE3629B7A40409897CAF9563EB1EE1944B2",
+      "SHA256": "D70D165B6706C61C56F2CA91307F4BBDB9846ACAE1DA3CFD84BF978FFB21AF23",
+      "SystemTime": "2019-07-29T21:34:00.460197Z",
+      "Task": 1,
+      "TerminalSessionId": 1,
+      "User": "MSEDGEWIN10\\IEUser",
+      "UserID": "S-1-5-18",
+      "UtcTime": "2019-07-29 21:33:59.390",
+      "Version": 5
+    }
+  ]
+}]

@@ -31,4 +31,4 @@ detection:
 falsepositives:
     - Legitimate admin scripts and scheduled tasks sometimes use -nop or hidden windows for automation
     - Some deployment/config-management tools (e.g. SCCM, Ansible WinRM) invoke PowerShell with similar flags
-level: high 
+level: high

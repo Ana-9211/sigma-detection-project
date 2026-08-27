@@ -1,4 +1,4 @@
-﻿title: Local or Domain Group Membership Enumeration via Windows Security Auditing
+title: Local or Domain Group Membership Enumeration via Windows Security Auditing
 id: 5e6f7a8b-9c0d-4e1f-2a3b-4c5d6e7f8a9b
 status: experimental
 description: Detects local or security-enabled group membership enumeration captured via Windows Security auditing (Events 4798/4799), covering discovery activity invisible to Sysmon process-creation logging

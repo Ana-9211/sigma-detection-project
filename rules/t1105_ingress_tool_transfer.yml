@@ -1,4 +1,4 @@
-﻿title: File Download via Certutil or Bitsadmin
+title: File Download via Certutil or Bitsadmin
 id: 1e2f3a4b-5c6d-4e7f-8a9b-0c1d2e3f4a5b
 status: experimental
 description: Detects use of certutil.exe or bitsadmin.exe to download files, a common living-off-the-land technique for retrieving second-stage payloads

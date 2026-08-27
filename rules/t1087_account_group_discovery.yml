@@ -1,4 +1,4 @@
-﻿title: Account and Group Discovery via Native Windows Binaries
+title: Account and Group Discovery via Native Windows Binaries
 id: 4d5e6f7a-8b9c-4d0e-1f2a-3b4c5d6e7f8a
 status: experimental
 description: Detects use of net.exe, nltest.exe, or whoami.exe with arguments commonly used for account, group, or domain trust reconnaissance

@@ -1,4 +1,4 @@
-﻿title: Windows Security Event Log Cleared
+title: Windows Security Event Log Cleared
 id: 6f7a8b9c-0d1e-4f2a-3b4c-5d6e7f8a9b0c
 status: experimental
 description: Detects clearing of the Windows Security event log, commonly used to destroy evidence of prior activity
