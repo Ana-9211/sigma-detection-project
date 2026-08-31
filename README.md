@@ -16,8 +16,7 @@ I wanted to understand how detections actually behave in the real world instead 
 - `rules/` — the Sigma rules I wrote or adjusted
 - `converted-queries/` — Splunk queries generated from the Sigma rules
 - `writeups/` — notes explaining the technique, validation, and mistakes
-- `validation/` — reproducibility notes and validation snapshot guidance
-- `*_detections.json` — generated detection snapshots from local EVTX testing
+- `validation/` — reproducibility notes and generated detection snapshots
 
 The raw EVTX corpus and local Zircolite checkout are intentionally excluded because
 they are large third-party/local inputs. The tracked JSON snapshots preserve the

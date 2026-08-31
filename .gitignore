@@ -1,9 +1,9 @@
-# Local/generated outputs
+﻿# Local/generated outputs
 *.log
 *.json
 
 # Keep the small, generated validation snapshots reviewable in GitHub.
-!t*_detections.json
+!validation/*_detections.json
 
 # Large third-party or external data sources kept out of the repo
 Zircolite/

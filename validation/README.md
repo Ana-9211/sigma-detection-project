@@ -1,6 +1,6 @@
 # Validation Evidence
 
-The detection snapshots in the repository root are generated from the public
+The detection snapshots in this directory are generated from the public
 EVTX ATT&CK sample set using the local Zircolite checkout. The raw EVTX files
 and Zircolite source remain local-only because they are large external inputs;
 they are excluded by `.gitignore`.
